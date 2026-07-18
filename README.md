@@ -83,3 +83,49 @@ Development principles
 Status
 
 Early development.
+
+Reddit ingestion
+
+The ingestion script uses Reddit's official OAuth API and stores the API listing
+without changing its contents. Collection metadata is stored alongside the raw
+response in `data/raw`; later pipeline stages should read the `response` field.
+
+1. Create a Reddit "script" application and copy `.env.example` to `.env`.
+2. Add the application's client ID and secret and a descriptive user agent.
+3. Install dependencies and run:
+
+```bash
+python3 -m pip install -r requirements.txt
+python3 -m src.ingestion.reddit --limit 25 --subreddits travel solotravel
+```
+
+The limit must be between 1 and 100. Each run creates a timestamped JSON file;
+existing raw data is never overwritten.
+
+Travel Stack Exchange ingestion
+
+The Travel Stack Exchange adapter is independent of Reddit and works without an
+API key for small anonymous runs:
+
+```bash
+python3 -m src.ingestion.stackexchange --limit 10 --sort votes
+```
+
+Each run makes one request for questions and one batched request for their
+answers. It saves the untouched API responses under `response` in matching
+timestamped files:
+
+```text
+data/raw/stackexchange_questions_YYYYMMDDTHHMMSSZ.json
+data/raw/stackexchange_answers_YYYYMMDDTHHMMSSZ.json
+```
+
+The built-in `withbody` filter includes question and answer bodies. IDs, source
+links and per-item `content_license` values remain in the raw responses. At most
+100 answers are collected per run; use `--answers-limit` to choose a smaller
+bound. An optional Stack Apps API key can be configured as
+`STACKEXCHANGE_API_KEY` for a higher request quota.
+
+Stack Exchange contributions use versioned CC BY-SA licenses. Any downstream
+display or adaptation must preserve attribution, link to the source, identify
+the applicable license, and comply with its ShareAlike requirements.
