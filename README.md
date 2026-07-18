@@ -129,3 +129,19 @@ bound. An optional Stack Apps API key can be configured as
 Stack Exchange contributions use versioned CC BY-SA licenses. Any downstream
 display or adaptation must preserve attribution, link to the source, identify
 the applicable license, and comply with its ShareAlike requirements.
+
+Stack Exchange cleaning
+
+Process one matching raw question/answer capture pair with explicit input paths:
+
+```bash
+python3 -m src.processing.stackexchange \
+  --questions-file data/raw/stackexchange_questions_20260718T172355Z.json \
+  --answers-file data/raw/stackexchange_answers_20260718T172355Z.json
+```
+
+The processor validates that the captures have the same collection timestamp,
+joins answers through `question_id`, converts HTML bodies to readable text, and
+writes one attributed document per thread under a timestamped directory in
+`data/cleaned`. Raw captures are never modified. Existing cleaned runs are not
+overwritten.
