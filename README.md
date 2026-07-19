@@ -145,3 +145,19 @@ joins answers through `question_id`, converts HTML bodies to readable text, and
 writes one attributed document per thread under a timestamped directory in
 `data/cleaned`. Raw captures are never modified. Existing cleaned runs are not
 overwritten.
+
+Retrieval documents
+
+Convert a cleaned run into embedding-ready JSONL:
+
+```bash
+python3 -m src.processing.retrieval_documents \
+  --input-dir data/cleaned/stackexchange_threads_20260718T172355Z
+```
+
+The output is written to a timestamped
+`data/processed/stackexchange_retrieval_*.jsonl` file. Each question and answer
+becomes a separate retrieval unit. Answer units include the question title as
+context and retain their own source URL, author, score, accepted status,
+timestamps and content license. IDs and ordering are deterministic. Existing
+processed files are never overwritten.
