@@ -196,3 +196,19 @@ vector dimensions, document IDs and normalization before searching. It embeds
 the query with the exact model recorded in the manifest, computes cosine
 similarity, and returns ranked JSON containing scores, text, metadata, licenses
 and source links. No LLM is involved at this stage.
+
+Retrieval evaluation
+
+Run the small bilingual retrieval sanity set before adding generation:
+
+```bash
+.venv/bin/python -m src.evaluation.retrieval \
+  --manifest data/processed/stackexchange_embeddings_20260719T110457Z.json \
+  --cases evaluation/stackexchange_queries.json \
+  --top-k 3
+```
+
+The report includes Hit Rate@k, Mean Reciprocal Rank@k and mean Recall@k, plus
+ranked document IDs and scores for every query. The initial evaluation set has
+only four manually judged Swedish/English queries covering two source threads;
+it verifies the pipeline but is too small to support general quality claims.

@@ -1,0 +1,31 @@
+{
+  "description": "Small bilingual sanity set for the initial five-document Stack Exchange index.",
+  "cases": [
+    {
+      "case_id": "arrival-card-sv",
+      "query": "Måste jag fylla i ett ankomstkort innan jag reser till Indonesien?",
+      "relevant_document_ids": ["stackexchange-answer-204087"]
+    },
+    {
+      "case_id": "arrival-card-en",
+      "query": "Can I complete the Indonesian arrival card at the border instead of in advance?",
+      "relevant_document_ids": ["stackexchange-answer-204087"]
+    },
+    {
+      "case_id": "super-hotel-sv",
+      "query": "Är Super.com pålitligt när man bokar hotell?",
+      "relevant_document_ids": [
+        "stackexchange-answer-203639",
+        "stackexchange-answer-204088"
+      ]
+    },
+    {
+      "case_id": "super-hotel-en",
+      "query": "What experiences have travelers had booking hotels through Super.com?",
+      "relevant_document_ids": [
+        "stackexchange-answer-203639",
+        "stackexchange-answer-204088"
+      ]
+    }
+  ]
+}
