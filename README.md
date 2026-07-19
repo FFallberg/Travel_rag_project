@@ -212,3 +212,22 @@ The report includes Hit Rate@k, Mean Reciprocal Rank@k and mean Recall@k, plus
 ranked document IDs and scores for every query. The initial evaluation set has
 only four manually judged Swedish/English queries covering two source threads;
 it verifies the pipeline but is too small to support general quality claims.
+
+For the larger 98-document local index, the expanded evaluation set includes
+ten positive queries and four negative queries where no indexed document is
+relevant. Use `--min-score` to evaluate an abstention threshold:
+
+```bash
+.venv/bin/python -m src.evaluation.retrieval \
+  --manifest data/processed/stackexchange_embeddings_20260719T183004Z.json \
+  --cases evaluation/stackexchange_queries_expanded.json \
+  --top-k 3 \
+  --min-score 0.6
+```
+
+Negative-query rejection and positive retrieval metrics are reported
+separately. Positive cases in the expanded set are judged at thread level, so
+any question or answer from the selected source thread counts as topically
+relevant. On this small set, `0.6` separates the tested positive and negative
+queries, but it is preliminary and must be recalibrated as the corpus and
+evaluation set grow.

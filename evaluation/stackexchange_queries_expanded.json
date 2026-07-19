@@ -1,0 +1,85 @@
+{
+  "description": "Bilingual evaluation set for the initial 98-document Stack Exchange index. Empty relevance lists are intentional negative queries.",
+  "cases": [
+    {
+      "case_id": "corrupt-police-sv",
+      "query": "Hur kan en turist minska risken att bli trakasserad av korrupt polis?",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [1224]
+    },
+    {
+      "case_id": "booking-name-en",
+      "query": "Why does an airline booking system remove MR from a passenger's name?",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [149323]
+    },
+    {
+      "case_id": "window-shades-sv",
+      "query": "Varför måste flygplansfönstrens gardiner vara öppna vid start och landning?",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [20207]
+    },
+    {
+      "case_id": "denied-entry-en",
+      "query": "Is deliberately getting refused entry at the US border a safe idea?",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [24540]
+    },
+    {
+      "case_id": "avoid-vodka-sv",
+      "query": "Hur tackar man nej till vodka utan att förolämpa värden i Ryssland?",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [2539]
+    },
+    {
+      "case_id": "squat-toilet-en",
+      "query": "What is the correct way for a traveler to use a squat toilet?",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [3080]
+    },
+    {
+      "case_id": "american-invitation-sv",
+      "query": "Hur vet jag om en amerikan verkligen menar en vag inbjudan att hälsa på?",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [38177]
+    },
+    {
+      "case_id": "stateless-denmark-en",
+      "query": "How can a stateless US green card holder obtain documents to visit Denmark?",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [66845]
+    },
+    {
+      "case_id": "engine-braking-sv",
+      "query": "Varför finns skyltar som förbjuder motorbromsning för lastbilar?",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [96447]
+    },
+    {
+      "case_id": "boss-passport-en",
+      "query": "What should a worker do when their boss demands to keep their passport?",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [98367]
+    },
+    {
+      "case_id": "negative-porto-beaches",
+      "query": "Vilka stränder nära Porto är bäst för lugn simning?",
+      "relevant_document_ids": []
+    },
+    {
+      "case_id": "negative-denmark-language",
+      "query": "Vilken dialekt talar människor i norra Danmark?",
+      "relevant_document_ids": []
+    },
+    {
+      "case_id": "negative-tokyo-vegan",
+      "query": "Where can I find inexpensive vegan restaurants in Tokyo?",
+      "relevant_document_ids": []
+    },
+    {
+      "case_id": "negative-croatia-swimming",
+      "query": "Familjevänliga badvikar med varmt vatten i Kroatien",
+      "relevant_document_ids": []
+    }
+  ]
+}
