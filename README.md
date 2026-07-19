@@ -161,3 +161,21 @@ becomes a separate retrieval unit. Answer units include the question title as
 context and retain their own source URL, author, score, accepted status,
 timestamps and content license. IDs and ordering are deterministic. Existing
 processed files are never overwritten.
+
+Local embeddings
+
+Generate normalized multilingual embeddings from a retrieval JSONL file:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m src.embeddings.local \
+  --input-file data/processed/stackexchange_retrieval_20260719T102240Z.jsonl
+```
+
+The default `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`
+model supports Swedish and English and produces 384-dimensional vectors. The
+first run downloads the model locally. Output consists of a compressed `.npz`
+file mapping document IDs to normalized float32 vectors and a matching JSON
+manifest containing the model name, dimensions, source checksum and creation
+time. Existing embedding artifacts are never overwritten.
