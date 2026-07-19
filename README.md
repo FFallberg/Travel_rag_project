@@ -179,3 +179,20 @@ first run downloads the model locally. Output consists of a compressed `.npz`
 file mapping document IDs to normalized float32 vectors and a matching JSON
 manifest containing the model name, dimensions, source checksum and creation
 time. Existing embedding artifacts are never overwritten.
+
+Semantic search
+
+Search the local embedding index with a Swedish or English query:
+
+```bash
+.venv/bin/python -m src.retrieval.semantic_search \
+  --manifest data/processed/stackexchange_embeddings_20260719T110457Z.json \
+  --query "sol, bad och närhet till vatten" \
+  --top-k 3
+```
+
+The search command verifies the retrieval-document checksum and validates the
+vector dimensions, document IDs and normalization before searching. It embeds
+the query with the exact model recorded in the manifest, computes cosine
+similarity, and returns ranked JSON containing scores, text, metadata, licenses
+and source links. No LLM is involved at this stage.
