@@ -130,6 +130,26 @@ Stack Exchange contributions use versioned CC BY-SA licenses. Any downstream
 display or adaptation must preserve attribution, link to the source, identify
 the applicable license, and comply with its ShareAlike requirements.
 
+Targeted Stack Exchange ingestion
+
+Use the official advanced-search endpoint to collect destination-focused
+threads instead of a generic top-question listing:
+
+```bash
+python3 -m src.ingestion.stackexchange \
+  --query "Porto swimming beaches" \
+  --tags portugal \
+  --limit 10 \
+  --answers-limit 100
+```
+
+Supplying `--query` or `--tags` enables targeted mode and defaults to relevance
+sorting. Multiple tags are AND filters, so every returned question must contain
+all supplied tags; free text is better for broader concepts such as sunshine,
+swimming and atmosphere. The exact API response remains untouched under
+`response`, while the non-secret search parameters are recorded separately in
+`collection.request`. API keys are never written to raw captures.
+
 Stack Exchange cleaning
 
 Process one matching raw question/answer capture pair with explicit input paths:

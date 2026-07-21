@@ -13,11 +13,13 @@ import requests
 from dotenv import load_dotenv
 
 QUESTIONS_URL = "https://api.stackexchange.com/2.3/questions"
+SEARCH_URL = "https://api.stackexchange.com/2.3/search/advanced"
 SITE = "travel"
 DEFAULT_OUTPUT_DIR = Path("data/raw")
 MAX_QUESTIONS = 100
 MAX_ANSWERS = 100
 VALID_SORTS = ("activity", "creation", "votes", "hot", "week", "month")
+VALID_SEARCH_SORTS = ("activity", "creation", "votes", "relevance")
 
 
 def validate_limit(limit: int) -> int:
@@ -56,6 +58,77 @@ def fetch_questions(
     if not isinstance(payload, dict):
         raise RuntimeError("Stack Exchange response was not a JSON object")
     return payload
+
+
+def normalize_tags(tags: list[str] | None) -> list[str]:
+    """Validate and normalize Stack Exchange AND-tag filters."""
+    cleaned = [tag.strip() for tag in tags or [] if tag.strip()]
+    if len(cleaned) > 5:
+        raise ValueError("at most 5 tags are allowed")
+    if any(";" in tag for tag in cleaned):
+        raise ValueError("tags must not contain semicolons")
+    if len(set(cleaned)) != len(cleaned):
+        raise ValueError("tags must not contain duplicates")
+    return cleaned
+
+
+def targeted_search_params(
+    query: str | None,
+    tags: list[str] | None,
+    limit: int,
+    sort: str = "relevance",
+    minimum_answers: int = 1,
+) -> dict[str, str | int]:
+    """Build validated `/search/advanced` parameters without credentials."""
+    validate_limit(limit)
+    cleaned_query = query.strip() if query else ""
+    cleaned_tags = normalize_tags(tags)
+    if not cleaned_query and not cleaned_tags:
+        raise ValueError("targeted search requires a query or at least one tag")
+    if sort not in VALID_SEARCH_SORTS:
+        raise ValueError(f"search sort must be one of: {', '.join(VALID_SEARCH_SORTS)}")
+    if minimum_answers < 0:
+        raise ValueError("minimum_answers must not be negative")
+
+    params: dict[str, str | int] = {
+        "site": SITE,
+        "pagesize": limit,
+        "page": 1,
+        "order": "desc",
+        "sort": sort,
+        "answers": minimum_answers,
+        "filter": "withbody",
+    }
+    if cleaned_query:
+        params["q"] = cleaned_query
+    if cleaned_tags:
+        params["tagged"] = ";".join(cleaned_tags)
+    return params
+
+
+def fetch_targeted_questions(
+    query: str | None,
+    tags: list[str] | None,
+    limit: int,
+    sort: str = "relevance",
+    minimum_answers: int = 1,
+    api_key: str | None = None,
+    session: requests.Session | None = None,
+) -> tuple[dict[str, Any], dict[str, str | int]]:
+    """Return an untouched targeted search response and public request metadata."""
+    params = targeted_search_params(query, tags, limit, sort, minimum_answers)
+    request_params = dict(params)
+    api_params = dict(params)
+    if api_key:
+        api_params["key"] = api_key
+
+    http = session or requests.Session()
+    response = http.get(SEARCH_URL, params=api_params, timeout=30)
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise RuntimeError("Stack Exchange search response was not a JSON object")
+    return payload, request_params
 
 
 def extract_question_ids(response: dict[str, Any]) -> list[int]:
@@ -118,6 +191,7 @@ def save_raw_response(
     collected_at: datetime | None = None,
     resource: str = "questions",
     endpoint: str = QUESTIONS_URL,
+    request_params: dict[str, str | int] | None = None,
 ) -> Path:
     """Save an unmodified API response plus separate collection metadata."""
     if resource not in {"questions", "answers"}:
@@ -139,6 +213,8 @@ def save_raw_response(
         },
         "response": response,
     }
+    if request_params is not None:
+        document["collection"]["request"] = request_params
     with path.open("x", encoding="utf-8") as output:
         json.dump(document, output, ensure_ascii=False, indent=2)
         output.write("\n")
@@ -148,7 +224,22 @@ def save_raw_response(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--limit", type=int, default=25, help="Questions to fetch (1-100)")
-    parser.add_argument("--sort", choices=VALID_SORTS, default="votes")
+    parser.add_argument(
+        "--sort",
+        help="Generic: activity/creation/votes/hot/week/month; targeted also supports relevance",
+    )
+    parser.add_argument("--query", help="Free-text targeted search across question properties")
+    parser.add_argument(
+        "--tags",
+        nargs="*",
+        help="Up to five tags; Stack Exchange requires all supplied tags to match",
+    )
+    parser.add_argument(
+        "--minimum-answers",
+        type=int,
+        default=1,
+        help="Minimum answers for targeted search",
+    )
     parser.add_argument(
         "--answers-limit",
         type=int,
@@ -164,11 +255,27 @@ def main() -> None:
     args = parse_args()
     api_key = os.getenv("STACKEXCHANGE_API_KEY")
     try:
-        questions_response = fetch_questions(
-            limit=args.limit,
-            sort=args.sort,
-            api_key=api_key,
-        )
+        targeted = args.query is not None or args.tags is not None
+        if targeted:
+            selected_sort = args.sort or "relevance"
+            questions_response, request_params = fetch_targeted_questions(
+                query=args.query,
+                tags=args.tags,
+                limit=args.limit,
+                sort=selected_sort,
+                minimum_answers=args.minimum_answers,
+                api_key=api_key,
+            )
+            questions_endpoint = SEARCH_URL
+        else:
+            selected_sort = args.sort or "votes"
+            questions_response = fetch_questions(
+                limit=args.limit,
+                sort=selected_sort,
+                api_key=api_key,
+            )
+            request_params = None
+            questions_endpoint = QUESTIONS_URL
         question_ids = extract_question_ids(questions_response)
         if not question_ids:
             raise RuntimeError("Question response did not contain any question IDs")
@@ -184,6 +291,8 @@ def main() -> None:
             questions_response,
             args.output_dir,
             timestamp,
+            endpoint=questions_endpoint,
+            request_params=request_params,
         )
         answers_path = save_raw_response(
             answers_response,
@@ -198,7 +307,8 @@ def main() -> None:
     question_count = len(questions_response.get("items", []))
     answer_count = len(answers_response.get("items", []))
     remaining = answers_response.get("quota_remaining", "unknown")
-    print(f"Saved {question_count} untouched questions to {questions_path}")
+    mode = "targeted" if targeted else "generic"
+    print(f"Saved {question_count} untouched {mode} questions to {questions_path}")
     print(f"Saved {answer_count} untouched answers to {answers_path}")
     print(f"API quota remaining: {remaining}")
 
