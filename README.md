@@ -150,6 +150,22 @@ swimming and atmosphere. The exact API response remains untouched under
 `response`, while the non-secret search parameters are recorded separately in
 `collection.request`. API keys are never written to raw captures.
 
+Pilot collection
+
+The checked-in pilot configuration covers ten varied destinations plus eight
+travel themes. Run all searches as one collection with:
+
+```bash
+python3 -m src.ingestion.stackexchange_pilot
+```
+
+The runner saves every search response untouched in its own directory under
+`data/raw/stackexchange_pilot_*`. Questions appearing in several searches are
+deduplicated by `question_id` before answers are requested, which avoids using
+quota to fetch the same answers repeatedly. A `manifest.json` records the raw
+capture paths and duplicate counts. Edit `config/stackexchange_pilot.json` to
+adjust the pilot; start small because each configured search uses an API call.
+
 Stack Exchange cleaning
 
 Process one matching raw question/answer capture pair with explicit input paths:

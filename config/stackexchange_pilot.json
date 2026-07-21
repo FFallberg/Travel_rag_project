@@ -1,0 +1,24 @@
+{
+  "limit_per_search": 10,
+  "minimum_answers": 1,
+  "searches": [
+    {"name": "porto", "query": "Porto", "tags": ["portugal"]},
+    {"name": "lisbon", "query": "Lisbon", "tags": ["portugal"]},
+    {"name": "barcelona", "query": "Barcelona", "tags": ["spain"]},
+    {"name": "san-sebastian", "query": "San Sebastian", "tags": ["spain"]},
+    {"name": "las-palmas", "query": "Las Palmas", "tags": ["spain"]},
+    {"name": "ericeira", "query": "Ericeira", "tags": ["portugal"]},
+    {"name": "split", "query": "Split", "tags": ["croatia"]},
+    {"name": "nice", "query": "Nice", "tags": ["france"]},
+    {"name": "amsterdam", "query": "Amsterdam", "tags": ["netherlands"]},
+    {"name": "copenhagen", "query": "Copenhagen", "tags": ["denmark"]},
+    {"name": "surfing", "query": "surfing"},
+    {"name": "beaches-swimming", "query": "beaches swimming"},
+    {"name": "food", "query": "local food"},
+    {"name": "nightlife", "query": "nightlife"},
+    {"name": "budget", "query": "budget cheap"},
+    {"name": "nature", "query": "nature hiking"},
+    {"name": "public-transport", "query": "public transport"},
+    {"name": "family", "query": "family children"}
+  ]
+}
