@@ -211,18 +211,122 @@ def process_files(questions_file: Path, answers_file: Path, output_dir: Path) ->
     )
 
 
+def _manifest_capture_path(manifest_dir: Path, value: Any) -> Path:
+    """Resolve a manifest capture path without allowing directory traversal."""
+    if not isinstance(value, str) or not value:
+        raise ValueError("Manifest capture paths must be non-empty strings")
+    path = (manifest_dir / value).resolve()
+    try:
+        path.relative_to(manifest_dir.resolve())
+    except ValueError as error:
+        raise ValueError(f"Manifest capture path leaves the pilot directory: {value}") from error
+    return path
+
+
+def _deduplicate_items(items: list[Any], id_field: str, resource: str) -> list[dict[str, Any]]:
+    """Deduplicate capture items by ID and reject conflicting copies."""
+    unique: dict[int, dict[str, Any]] = {}
+    for item in items:
+        if not isinstance(item, dict):
+            raise ValueError(f"Every {resource} must be a JSON object")
+        item_id = item.get(id_field)
+        if not isinstance(item_id, int) or isinstance(item_id, bool) or item_id <= 0:
+            raise ValueError(f"Every {resource} must have a positive integer {id_field}")
+        previous = unique.get(item_id)
+        if previous is not None and previous != item:
+            raise ValueError(f"Conflicting {resource} data for {id_field} {item_id}")
+        unique.setdefault(item_id, item)
+    return list(unique.values())
+
+
+def load_pilot_captures(manifest_file: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Load and combine all raw captures referenced by one pilot manifest."""
+    try:
+        manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise ValueError(f"Could not read valid JSON from {manifest_file}: {error}") from error
+    if not isinstance(manifest, dict):
+        raise ValueError("Pilot manifest must contain a JSON object")
+
+    collected_at = manifest.get("collected_at")
+    question_paths = manifest.get("question_captures")
+    answer_paths = manifest.get("answer_captures")
+    if not isinstance(collected_at, str) or not collected_at:
+        raise ValueError("Pilot manifest is missing collected_at")
+    if not isinstance(question_paths, list) or not question_paths:
+        raise ValueError("Pilot manifest must reference question captures")
+    if not isinstance(answer_paths, list) or not answer_paths:
+        raise ValueError("Pilot manifest must reference answer captures")
+
+    question_items: list[Any] = []
+    answer_items: list[Any] = []
+    for value in question_paths:
+        capture = load_capture(
+            _manifest_capture_path(manifest_file.parent, value),
+            "questions",
+        )
+        if capture["collection"].get("collected_at") != collected_at:
+            raise ValueError("Question capture timestamp does not match pilot manifest")
+        question_items.extend(capture["response"]["items"])
+    for value in answer_paths:
+        capture = load_capture(
+            _manifest_capture_path(manifest_file.parent, value),
+            "answers",
+        )
+        if capture["collection"].get("collected_at") != collected_at:
+            raise ValueError("Answer capture timestamp does not match pilot manifest")
+        answer_items.extend(capture["response"]["items"])
+
+    questions = _deduplicate_items(question_items, "question_id", "question")
+    answers = _deduplicate_items(answer_items, "answer_id", "answer")
+    expected_count = manifest.get("unique_question_count")
+    if expected_count is not None and expected_count != len(questions):
+        raise ValueError(
+            "Pilot manifest unique_question_count does not match its question captures"
+        )
+    collection = {
+        "collected_at": collected_at,
+        "source": "Travel Stack Exchange",
+    }
+    return (
+        {"collection": {**collection, "resource": "questions"}, "response": {"items": questions}},
+        {"collection": {**collection, "resource": "answers"}, "response": {"items": answers}},
+    )
+
+
+def process_manifest(manifest_file: Path, output_dir: Path) -> Path:
+    """Validate, combine, clean and persist an entire pilot collection."""
+    questions_capture, answers_capture = load_pilot_captures(manifest_file)
+    documents = build_thread_documents(questions_capture, answers_capture)
+    return write_documents(
+        documents,
+        questions_capture["collection"]["collected_at"],
+        output_dir,
+    )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--questions-file", type=Path, required=True)
-    parser.add_argument("--answers-file", type=Path, required=True)
+    inputs = parser.add_mutually_exclusive_group(required=True)
+    inputs.add_argument("--manifest", type=Path, help="Pilot collection manifest")
+    inputs.add_argument("--questions-file", type=Path, help="Single questions capture")
+    parser.add_argument("--answers-file", type=Path, help="Single answers capture")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.questions_file is not None and args.answers_file is None:
+        parser.error("--answers-file is required with --questions-file")
+    if args.manifest is not None and args.answers_file is not None:
+        parser.error("--answers-file cannot be used with --manifest")
+    return args
 
 
 def main() -> None:
     args = parse_args()
     try:
-        run_dir = process_files(args.questions_file, args.answers_file, args.output_dir)
+        if args.manifest is not None:
+            run_dir = process_manifest(args.manifest, args.output_dir)
+        else:
+            run_dir = process_files(args.questions_file, args.answers_file, args.output_dir)
     except (ValueError, FileExistsError) as error:
         raise SystemExit(f"Stack Exchange processing failed: {error}") from error
     count = len(list(run_dir.glob("question_*.json")))
