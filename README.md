@@ -182,6 +182,18 @@ writes one attributed document per thread under a timestamped directory in
 `data/cleaned`. Raw captures are never modified. Existing cleaned runs are not
 overwritten.
 
+Process a complete pilot collection through its manifest:
+
+```bash
+python3 -m src.processing.stackexchange \
+  --manifest data/raw/stackexchange_pilot_20260721T131403Z/manifest.json
+```
+
+This combines all question and answer captures belonging to the run,
+deduplicates repeated question and answer IDs, validates the manifest counts,
+and writes one cleaned file per unique thread. Conflicting copies are rejected
+instead of silently choosing one.
+
 Retrieval documents
 
 Convert a cleaned run into embedding-ready JSONL:

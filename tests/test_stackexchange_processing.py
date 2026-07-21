@@ -5,7 +5,9 @@ import pytest
 from src.processing.stackexchange import (
     build_thread_documents,
     html_to_text,
+    load_pilot_captures,
     process_files,
+    process_manifest,
 )
 
 
@@ -109,3 +111,87 @@ def test_process_files_writes_one_document_per_thread_without_overwrite(tmp_path
     assert saved["answers"][0]["text"] == "An answer"
     with pytest.raises(FileExistsError):
         process_files(questions_file, answers_file, tmp_path / "cleaned")
+
+
+def test_processes_all_manifest_captures_and_deduplicates_questions(tmp_path) -> None:
+    pilot_dir = tmp_path / "pilot"
+    pilot_dir.mkdir()
+    question = {
+        "question_id": 42,
+        "title": "A title",
+        "body": "<p>A question</p>",
+        "link": "https://travel.stackexchange.com/q/42",
+    }
+    answer = {"answer_id": 7, "question_id": 42, "body": "<p>An answer</p>"}
+    question_paths = ["porto/questions.json", "surfing/questions.json"]
+    for relative_path in question_paths:
+        path = pilot_dir / relative_path
+        path.parent.mkdir()
+        path.write_text(json.dumps(capture("questions", [question])), encoding="utf-8")
+    answers_path = pilot_dir / "answers-1/answers.json"
+    answers_path.parent.mkdir()
+    answers_path.write_text(json.dumps(capture("answers", [answer])), encoding="utf-8")
+    manifest_path = pilot_dir / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "collected_at": "2026-07-18T12:00:00Z",
+                "question_captures": question_paths,
+                "answer_captures": ["answers-1/answers.json"],
+                "unique_question_count": 1,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    run_dir = process_manifest(manifest_path, tmp_path / "cleaned")
+    saved = json.loads((run_dir / "question_42.json").read_text(encoding="utf-8"))
+
+    assert saved["question"]["text"] == "A question"
+    assert len(saved["answers"]) == 1
+
+
+def test_manifest_rejects_paths_outside_pilot_directory(tmp_path) -> None:
+    manifest_path = tmp_path / "pilot/manifest.json"
+    manifest_path.parent.mkdir()
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "collected_at": "2026-07-18T12:00:00Z",
+                "question_captures": ["../questions.json"],
+                "answer_captures": ["answers.json"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="leaves the pilot directory"):
+        load_pilot_captures(manifest_path)
+
+
+def test_manifest_rejects_conflicting_duplicate_questions(tmp_path) -> None:
+    pilot_dir = tmp_path / "pilot"
+    pilot_dir.mkdir()
+    first = {"question_id": 42, "title": "First"}
+    second = {"question_id": 42, "title": "Changed"}
+    for name, question in (("first.json", first), ("second.json", second)):
+        (pilot_dir / name).write_text(
+            json.dumps(capture("questions", [question])), encoding="utf-8"
+        )
+    (pilot_dir / "answers.json").write_text(
+        json.dumps(capture("answers", [])), encoding="utf-8"
+    )
+    manifest_path = pilot_dir / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "collected_at": "2026-07-18T12:00:00Z",
+                "question_captures": ["first.json", "second.json"],
+                "answer_captures": ["answers.json"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Conflicting question data"):
+        load_pilot_captures(manifest_path)
