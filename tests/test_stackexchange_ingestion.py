@@ -5,10 +5,13 @@ import pytest
 
 from src.ingestion.stackexchange import (
     QUESTIONS_URL,
+    SEARCH_URL,
     answers_url,
     extract_question_ids,
     fetch_answers,
     fetch_questions,
+    fetch_targeted_questions,
+    normalize_tags,
     save_raw_response,
     validate_limit,
 )
@@ -63,6 +66,52 @@ def test_fetch_uses_travel_site_and_preserves_response() -> None:
         "key": "test-key",
     }
     assert kwargs["timeout"] == 30
+
+
+def test_targeted_search_uses_advanced_endpoint_and_public_metadata() -> None:
+    raw_response = {"items": [{"question_id": 42}], "quota_remaining": 290}
+    session = FakeSession(raw_response)
+
+    result, request_params = fetch_targeted_questions(
+        " Porto swimming ",
+        ["portugal", "beaches"],
+        10,
+        api_key="secret-key",
+        session=session,
+    )
+
+    assert result is raw_response
+    url, kwargs = session.request
+    assert url == SEARCH_URL
+    assert kwargs["params"] == {
+        "site": "travel",
+        "pagesize": 10,
+        "page": 1,
+        "order": "desc",
+        "sort": "relevance",
+        "answers": 1,
+        "filter": "withbody",
+        "q": "Porto swimming",
+        "tagged": "portugal;beaches",
+        "key": "secret-key",
+    }
+    assert "key" not in request_params
+    assert request_params == {key: value for key, value in kwargs["params"].items() if key != "key"}
+
+
+def test_targeted_search_requires_query_or_tags() -> None:
+    with pytest.raises(ValueError, match="requires a query"):
+        fetch_targeted_questions(None, [], 10, session=FakeSession({}))
+
+
+def test_tags_are_limited_clean_and_unique() -> None:
+    assert normalize_tags([" portugal ", "beaches"]) == ["portugal", "beaches"]
+    with pytest.raises(ValueError, match="at most 5"):
+        normalize_tags(["a", "b", "c", "d", "e", "f"])
+    with pytest.raises(ValueError, match="semicolons"):
+        normalize_tags(["portugal;beaches"])
+    with pytest.raises(ValueError, match="duplicates"):
+        normalize_tags(["portugal", "portugal"])
 
 
 def test_extract_ids_and_fetch_answers_as_one_batch() -> None:
@@ -145,3 +194,21 @@ def test_save_answers_uses_separate_matching_filename(tmp_path) -> None:
     assert saved["collection"]["resource"] == "answers"
     assert saved["collection"]["endpoint"] == f"{QUESTIONS_URL}/42/answers"
     assert path.name == "stackexchange_answers_20260718T120000Z.json"
+
+
+def test_save_targeted_search_keeps_request_separate_from_response(tmp_path) -> None:
+    raw_response = {"items": [{"question_id": 42}]}
+    request = {"q": "Porto swimming", "tagged": "portugal"}
+
+    path = save_raw_response(
+        raw_response,
+        tmp_path,
+        datetime(2026, 7, 18, 12, 0, tzinfo=timezone.utc),
+        endpoint=SEARCH_URL,
+        request_params=request,
+    )
+    saved = json.loads(path.read_text(encoding="utf-8"))
+
+    assert saved["response"] == raw_response
+    assert saved["collection"]["endpoint"] == SEARCH_URL
+    assert saved["collection"]["request"] == request
