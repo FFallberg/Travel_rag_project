@@ -1,0 +1,73 @@
+{
+  "description": "Challenging multi-constraint recommendation queries for the 433-document Stack Exchange pilot index. Relevance was judged from complete thread content before retrieval was run.",
+  "cases": [
+    {
+      "case_id": "quiet-surf-coast-sv",
+      "query": "Vi är ett par som vill bo lugnt och personligt vid havet, kunna lära oss surfa, promenera till restauranger och se solnedgången. Vart passar?",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [10059]
+    },
+    {
+      "case_id": "natural-beach-without-car-en",
+      "query": "Recommend a low-key coastal place with uncrowded sandy beaches, scenery and affordable buses because I will not rent a car.",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [1648]
+    },
+    {
+      "case_id": "active-spain-autumn-sv",
+      "query": "Jag söker en aktiv höstresa i Spanien med vandring, historiska miljöer, natur och bra fotomotiv, gärna även kust.",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [1573]
+    },
+    {
+      "case_id": "french-riviera-car-free-en",
+      "query": "I want to use the French Riviera as a car-free base for scenic hikes and inexpensive day trips by train or bus.",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [17704, 11066, 36184]
+    },
+    {
+      "case_id": "portugal-two-base-trip-sv",
+      "query": "Kan jag resa tio dagar utan bil i Portugal, bo i Lissabon och Porto och göra dagsutflykter med kollektivtrafik?",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [192749]
+    },
+    {
+      "case_id": "family-rail-europe-sv",
+      "query": "Vi vill tågluffa i Europa med små barn och behöver ett familjevänligt alternativ till separata tågbiljetter.",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [8112]
+    },
+    {
+      "case_id": "warm-surf-and-dive-en",
+      "query": "Suggest a warm destination where two people with different experience levels can surf and scuba dive on the same day.",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [3828]
+    },
+    {
+      "case_id": "safe-open-water-sv",
+      "query": "Jag prioriterar rent öppet vatten för regelbunden simning och vill förstå risker som strömmar, vågor och dålig vattenkvalitet.",
+      "relevant_document_ids": [],
+      "relevant_question_ids": [57484, 199892, 35608]
+    },
+    {
+      "case_id": "negative-winter-northern-lights",
+      "query": "Vi vill se norrsken från en glasigloo och åka hundspann i finska Lappland i januari.",
+      "relevant_document_ids": []
+    },
+    {
+      "case_id": "negative-wheelchair-morocco",
+      "query": "Recommend a wheelchair-accessible riad and step-free attractions in Marrakech.",
+      "relevant_document_ids": []
+    },
+    {
+      "case_id": "negative-galapagos-wildlife",
+      "query": "Vilken Galápagos-kryssning är bäst för att se havsleguaner och jättesköldpaddor?",
+      "relevant_document_ids": []
+    },
+    {
+      "case_id": "negative-new-zealand-campervan",
+      "query": "Where can I legally freedom-camp in a campervan on New Zealand's South Island?",
+      "relevant_document_ids": []
+    }
+  ]
+}

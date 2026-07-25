@@ -284,21 +284,25 @@ relevant. On this small set, `0.6` separates the tested positive and negative
 queries, but it is preliminary and must be recalibrated as the corpus and
 evaluation set grow.
 
-Evaluate the complete 433-document pilot index with its manually judged,
-bilingual query set:
+Pilot retrieval evaluation
+
+The complete 433-document pilot index has two bilingual evaluation sets. The
+sanity set mostly paraphrases known threads, while the recommendation set uses
+harder multi-constraint prompts that combine preferences such as atmosphere,
+activities, transport and budget:
 
 ```bash
 .venv/bin/python -m src.evaluation.retrieval \
   --manifest data/processed/stackexchange_embeddings_20260725T133119Z.json \
-  --cases evaluation/stackexchange_pilot_queries.json \
-  --top-k 3
+  --cases evaluation/stackexchange_recommendation_queries.json \
+  --top-k 3 \
+  --min-score 0.6
 ```
 
-The pilot cases cover beaches, surfing, transport, food, budget, nature,
-nightlife and family travel, plus unrelated negative queries. Recalibrate any
-score threshold against this corpus instead of carrying over the threshold
-from the earlier 98-document experiment. The initial sanity run retrieved the
-judged thread at rank 1 for all 16 positive cases; `--min-score 0.6` also
-rejected all four negative cases. These cases are deliberately close to known
-corpus topics, so the perfect result is preliminary rather than evidence of
-general recommendation quality.
+Both files include unrelated negative queries. Treat thresholds and metrics as
+preliminary because the manually judged sets and source corpus are still small.
+With `top-k 3` and `min-score 0.6`, the initial recommendation run reached
+Hit Rate@3 `0.875`, MRR@3 `0.875`, mean Recall@3 `0.708`, and rejected all four
+negative queries. It missed the judged Montenegro thread for a natural,
+car-free beach query. Results also show that several documents from one thread
+can occupy the result list, reducing the breadth of destinations retrieved.
