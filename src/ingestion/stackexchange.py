@@ -160,15 +160,18 @@ def answers_url(question_ids: list[int]) -> str:
 def fetch_answers(
     question_ids: list[int],
     limit: int = MAX_ANSWERS,
+    page: int = 1,
     api_key: str | None = None,
     session: requests.Session | None = None,
 ) -> dict[str, Any]:
-    """Return answers for a question batch without transforming the response."""
+    """Return one untouched answer page for a question batch."""
     validate_limit(limit)
+    if not isinstance(page, int) or isinstance(page, bool) or page < 1:
+        raise ValueError("page must be a positive integer")
     params: dict[str, str | int] = {
         "site": SITE,
         "pagesize": limit,
-        "page": 1,
+        "page": page,
         "order": "desc",
         "sort": "votes",
         "filter": "withbody",

@@ -162,9 +162,11 @@ python3 -m src.ingestion.stackexchange_pilot
 The runner saves every search response untouched in its own directory under
 `data/raw/stackexchange_pilot_*`. Questions appearing in several searches are
 deduplicated by `question_id` before answers are requested, which avoids using
-quota to fetch the same answers repeatedly. A `manifest.json` records the raw
-capture paths and duplicate counts. Edit `config/stackexchange_pilot.json` to
-adjust the pilot; start small because each configured search uses an API call.
+quota to fetch the same answers repeatedly. Answer pages are fetched until the
+API returns `has_more: false`, and each untouched page is stored separately. A
+`manifest.json` records all raw capture paths and duplicate counts. Edit
+`config/stackexchange_pilot.json` to adjust the pilot; start small because each
+configured search and answer page uses an API call.
 
 Stack Exchange cleaning
 
