@@ -124,21 +124,31 @@ def collect_pilot(
         raise RuntimeError("pilot searches did not return any question IDs")
 
     answer_captures: list[str] = []
-    for number, question_batch in enumerate(batches(question_ids), start=1):
-        response = fetch_answers(
-            question_batch,
-            limit=MAX_ANSWERS,
-            api_key=api_key,
-            session=session,
-        )
-        path = save_raw_response(
-            response,
-            run_dir / f"answers-{number}",
-            timestamp,
-            resource="answers",
-            endpoint=answers_url(question_batch),
-        )
-        answer_captures.append(str(path.relative_to(run_dir)))
+    for batch_number, question_batch in enumerate(batches(question_ids), start=1):
+        page = 1
+        while True:
+            response = fetch_answers(
+                question_batch,
+                limit=MAX_ANSWERS,
+                page=page,
+                api_key=api_key,
+                session=session,
+            )
+            path = save_raw_response(
+                response,
+                run_dir / f"answers-{batch_number}-page-{page}",
+                timestamp,
+                resource="answers",
+                endpoint=answers_url(question_batch),
+                request_params={"page": page, "pagesize": MAX_ANSWERS},
+            )
+            answer_captures.append(str(path.relative_to(run_dir)))
+            has_more = response.get("has_more", False)
+            if not isinstance(has_more, bool):
+                raise RuntimeError("Stack Exchange has_more must be a boolean")
+            if not has_more:
+                break
+            page += 1
 
     manifest = {
         "collected_at": timestamp.isoformat().replace("+00:00", "Z"),

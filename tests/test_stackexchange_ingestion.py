@@ -131,7 +131,7 @@ def test_extract_ids_and_fetch_answers_as_one_batch() -> None:
     session = FakeSession(raw_answers)
 
     question_ids = extract_question_ids(questions)
-    result = fetch_answers(question_ids, limit=50, session=session)
+    result = fetch_answers(question_ids, limit=50, page=2, session=session)
 
     assert question_ids == [42, 99]
     assert result is raw_answers
@@ -140,7 +140,7 @@ def test_extract_ids_and_fetch_answers_as_one_batch() -> None:
     assert kwargs["params"] == {
         "site": "travel",
         "pagesize": 50,
-        "page": 1,
+        "page": 2,
         "order": "desc",
         "sort": "votes",
         "filter": "withbody",
@@ -152,6 +152,11 @@ def test_answers_url_requires_valid_ids() -> None:
         answers_url([])
     with pytest.raises(ValueError):
         answers_url([-1])
+
+
+def test_fetch_answers_requires_positive_page() -> None:
+    with pytest.raises(ValueError, match="page must be a positive integer"):
+        fetch_answers([42], page=0, session=FakeSession({}))
 
 
 def test_save_preserves_raw_response_and_will_not_overwrite(tmp_path) -> None:

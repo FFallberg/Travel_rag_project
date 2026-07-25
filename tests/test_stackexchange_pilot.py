@@ -68,8 +68,15 @@ def test_collect_saves_untouched_searches_and_fetches_unique_answers(tmp_path) -
     }
     first = {"items": [{"question_id": 1}, {"question_id": 2}]}
     second = {"items": [{"question_id": 2}, {"question_id": 3}]}
-    answers = {"items": [{"answer_id": 10, "question_id": 1}]}
-    session = FakeSession([first, second, answers])
+    answers_page_1 = {
+        "items": [{"answer_id": 10, "question_id": 1}],
+        "has_more": True,
+    }
+    answers_page_2 = {
+        "items": [{"answer_id": 11, "question_id": 2}],
+        "has_more": False,
+    }
+    session = FakeSession([first, second, answers_page_1, answers_page_2])
 
     manifest_path = collect_pilot(
         config,
@@ -82,10 +89,34 @@ def test_collect_saves_untouched_searches_and_fetches_unique_answers(tmp_path) -
     assert manifest["unique_question_count"] == 3
     assert manifest["duplicate_question_count"] == 1
     assert len(manifest["question_captures"]) == 2
-    assert len(manifest["answer_captures"]) == 1
+    assert len(manifest["answer_captures"]) == 2
     first_capture = json.loads(
         (manifest_path.parent / manifest["question_captures"][0]).read_text(encoding="utf-8")
     )
     assert first_capture["response"] == first
-    answer_url, _ = session.requests[-1]
+    answer_url, kwargs = session.requests[-1]
     assert answer_url.endswith("/questions/1;2;3/answers")
+    assert kwargs["params"]["page"] == 2
+    second_answer_capture = json.loads(
+        (manifest_path.parent / manifest["answer_captures"][1]).read_text(encoding="utf-8")
+    )
+    assert second_answer_capture["response"] == answers_page_2
+    assert second_answer_capture["collection"]["request"]["page"] == 2
+
+
+def test_collect_rejects_invalid_has_more(tmp_path) -> None:
+    config = {"searches": [{"name": "porto", "query": "Porto"}]}
+    session = FakeSession(
+        [
+            {"items": [{"question_id": 1}]},
+            {"items": [], "has_more": "yes"},
+        ]
+    )
+
+    with pytest.raises(RuntimeError, match="has_more must be a boolean"):
+        collect_pilot(
+            config,
+            tmp_path,
+            session=session,
+            collected_at=datetime(2026, 7, 21, 12, 0, tzinfo=timezone.utc),
+        )
