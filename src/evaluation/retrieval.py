@@ -80,6 +80,7 @@ def evaluate(
     top_k: int = 3,
     min_score: float | None = None,
     model: EmbeddingModel | None = None,
+    unique_threads: bool = False,
 ) -> dict[str, Any]:
     """Compute positive retrieval metrics and negative-query rejection at k."""
     if top_k <= 0:
@@ -115,7 +116,13 @@ def evaluate(
     negative_count = 0
     negative_rejections = 0
     for case in cases:
-        results = search(index, case.query, top_k=top_k, model=active_model)
+        results = search(
+            index,
+            case.query,
+            top_k=top_k,
+            model=active_model,
+            unique_threads=unique_threads,
+        )
         passing_results = [
             result
             for result in results
@@ -190,6 +197,7 @@ def evaluate(
             "negative_query_count": negative_count,
             "top_k": top_k,
             "min_score": min_score,
+            "unique_threads": unique_threads,
             "hit_rate_at_k": hits / positive_count if positive_count else None,
             "mrr_at_k": reciprocal_rank_sum / positive_count if positive_count else None,
             "mean_recall_at_k": recall_sum / positive_count if positive_count else None,
@@ -208,6 +216,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--documents-file", type=Path)
     parser.add_argument("--top-k", type=int, default=3)
     parser.add_argument("--min-score", type=float)
+    parser.add_argument(
+        "--unique-threads",
+        action="store_true",
+        help="Evaluate at most one result per Stack Exchange question thread",
+    )
     return parser.parse_args()
 
 
@@ -220,6 +233,7 @@ def main() -> None:
             load_cases(args.cases),
             top_k=args.top_k,
             min_score=args.min_score,
+            unique_threads=args.unique_threads,
         )
     except (ValueError, RuntimeError, OSError) as error:
         raise SystemExit(f"Retrieval evaluation failed: {error}") from error

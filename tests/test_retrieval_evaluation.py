@@ -78,6 +78,7 @@ def test_evaluate_computes_hit_mrr_and_recall() -> None:
     assert report["summary"]["positive_query_count"] == 2
     assert report["summary"]["negative_query_count"] == 0
     assert report["summary"]["top_k"] == 2
+    assert report["summary"]["unique_threads"] is False
     assert report["summary"]["hit_rate_at_k"] == 1.0
     assert report["summary"]["mrr_at_k"] == 1.0
     assert report["summary"]["mean_recall_at_k"] == 0.75
@@ -153,3 +154,32 @@ def test_question_level_relevance_accepts_any_document_from_thread() -> None:
     assert report["summary"]["hit_rate_at_k"] == 1.0
     assert report["queries"][0]["first_relevant_rank"] == 2
     assert report["queries"][0]["retrieved"][1]["is_relevant"] is True
+
+
+def test_evaluation_can_request_unique_threads() -> None:
+    custom_index = index()
+    records = list(custom_index.records)
+    records[0] = {**records[0], "metadata": {"question_id": 10}}
+    records[1] = {**records[1], "metadata": {"question_id": 10}}
+    records[2] = {**records[2], "metadata": {"question_id": 20}}
+    custom_index = SearchIndex(
+        custom_index.model_name,
+        custom_index.document_ids,
+        custom_index.embeddings,
+        tuple(records),
+    )
+
+    report = evaluate(
+        custom_index,
+        [EvaluationCase("thread", "query", frozenset(), frozenset({10, 20}))],
+        top_k=2,
+        model=QueryModel({"query": [1.0, 0.0]}),
+        unique_threads=True,
+    )
+
+    assert report["summary"]["unique_threads"] is True
+    assert report["summary"]["mean_recall_at_k"] == 1.0
+    assert [item["document_id"] for item in report["queries"][0]["retrieved"]] == [
+        "doc-a",
+        "doc-c",
+    ]

@@ -240,14 +240,17 @@ Search the local embedding index with a Swedish or English query:
 .venv/bin/python -m src.retrieval.semantic_search \
   --manifest data/processed/stackexchange_embeddings_20260719T110457Z.json \
   --query "sol, bad och närhet till vatten" \
-  --top-k 3
+  --top-k 3 \
+  --unique-threads
 ```
 
 The search command verifies the retrieval-document checksum and validates the
 vector dimensions, document IDs and normalization before searching. It embeds
 the query with the exact model recorded in the manifest, computes cosine
 similarity, and returns ranked JSON containing scores, text, metadata, licenses
-and source links. No LLM is involved at this stage.
+and source links. `--unique-threads` keeps only the best-scoring document from
+each question thread, providing broader context for recommendations. No LLM is
+involved at this stage.
 
 Retrieval evaluation
 
@@ -296,7 +299,8 @@ activities, transport and budget:
   --manifest data/processed/stackexchange_embeddings_20260725T133119Z.json \
   --cases evaluation/stackexchange_recommendation_queries.json \
   --top-k 3 \
-  --min-score 0.6
+  --min-score 0.6 \
+  --unique-threads
 ```
 
 Both files include unrelated negative queries. Treat thresholds and metrics as
@@ -306,3 +310,6 @@ Hit Rate@3 `0.875`, MRR@3 `0.875`, mean Recall@3 `0.708`, and rejected all four
 negative queries. It missed the judged Montenegro thread for a natural,
 car-free beach query. Results also show that several documents from one thread
 can occupy the result list, reducing the breadth of destinations retrieved.
+Running with `--unique-threads` removes those repeated threads and broadens the
+context, while leaving these aggregate metrics unchanged. The remaining miss
+is therefore a ranking problem rather than a duplicate-result problem.
