@@ -210,7 +210,9 @@ The output is written to a timestamped
 becomes a separate retrieval unit. Answer units include the question title as
 context and retain their own source URL, author, score, accepted status,
 timestamps and content license. IDs and ordering are deterministic. Existing
-processed files are never overwritten.
+processed files are never overwritten. If the API omits `content_license` for
+an item, the value remains `null` and metadata records
+`license_status: missing_from_source`; the pipeline never invents a license.
 
 Local embeddings
 

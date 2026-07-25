@@ -77,11 +77,22 @@ def test_rejects_answer_linked_to_another_question() -> None:
         build_retrieval_documents(mismatched)
 
 
-def test_requires_license_for_attribution() -> None:
-    unlicensed = thread()
-    unlicensed["answers"][0]["content_license"] = None
-    with pytest.raises(ValueError, match="missing its content license"):
-        build_retrieval_documents(unlicensed)
+def test_marks_license_missing_from_source_without_inventing_one() -> None:
+    missing_license = thread()
+    missing_license["question"]["content_license"] = None
+
+    documents = build_retrieval_documents(missing_license)
+
+    assert documents[0]["content_license"] is None
+    assert documents[0]["metadata"]["license_status"] == "missing_from_source"
+    assert documents[1]["metadata"]["license_status"] == "provided_by_source"
+
+
+def test_rejects_invalid_non_null_license() -> None:
+    invalid_license = thread()
+    invalid_license["answers"][0]["content_license"] = ""
+    with pytest.raises(ValueError, match="invalid content license"):
+        build_retrieval_documents(invalid_license)
 
 
 def test_load_documents_is_deterministic(tmp_path) -> None:
