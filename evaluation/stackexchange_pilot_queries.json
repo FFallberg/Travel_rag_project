@@ -1,0 +1,25 @@
+{
+  "description": "Bilingual sanity evaluation for the 433-document Stack Exchange pilot index. Positive relevance is judged at thread level; empty relevance lists are intentional negative queries.",
+  "cases": [
+    {"case_id": "fuerteventura-surf-romance-sv", "query": "Var på Fuerteventura kan ett par bo lugnt nära havet och samtidigt gå i surfskola?", "relevant_document_ids": [], "relevant_question_ids": [10059]},
+    {"case_id": "surf-and-diving-en", "query": "Which destinations combine good scuba diving with surfing?", "relevant_document_ids": [], "relevant_question_ids": [3828]},
+    {"case_id": "california-surf-hotel-sv", "query": "Var i södra Kalifornien finns surfstränder med hotell direkt vid stranden?", "relevant_document_ids": [], "relevant_question_ids": [2831]},
+    {"case_id": "montenegro-natural-beaches-en", "query": "Where can I find natural, less commercial beaches in Montenegro when travelling by bus?", "relevant_document_ids": [], "relevant_question_ids": [1648]},
+    {"case_id": "goa-monsoon-swimming-sv", "query": "Varför är det farligt att bada vid Goas stränder under monsunperioden?", "relevant_document_ids": [], "relevant_question_ids": [35608]},
+    {"case_id": "singapore-open-water-en", "query": "Where can I swim in clean open water rather than a pool in Singapore?", "relevant_document_ids": [], "relevant_question_ids": [199892]},
+    {"case_id": "portugal-public-transport-sv", "query": "Hur tar man sig runt i Portugal med tåg och annan kollektivtrafik?", "relevant_document_ids": [], "relevant_question_ids": [192749]},
+    {"case_id": "nice-monaco-transit-en", "query": "How do I travel between Nice and Monaco using public transport?", "relevant_document_ids": [], "relevant_question_ids": [11066, 36184]},
+    {"case_id": "barcelona-language-sv", "query": "Ska jag prata katalanska eller spanska när jag besöker Barcelona?", "relevant_document_ids": [], "relevant_question_ids": [38218]},
+    {"case_id": "lisbon-food-en", "query": "What traditional Portuguese food should I try in Lisbon?", "relevant_document_ids": [], "relevant_question_ids": [47797]},
+    {"case_id": "croatia-daily-budget-sv", "query": "Hur stor dagsbudget behöver jag för mat och vardagsutgifter i Kroatien?", "relevant_document_ids": [], "relevant_question_ids": [8539]},
+    {"case_id": "spain-hiking-photography-en", "query": "Where in Spain can I combine hiking, nature, architecture and photography?", "relevant_document_ids": [], "relevant_question_ids": [1573]},
+    {"case_id": "mykonos-nightlife-sv", "query": "Finns det fortfarande nattliv på Mykonos i september?", "relevant_document_ids": [], "relevant_question_ids": [73649]},
+    {"case_id": "family-interrail-en", "query": "Is there an Interrail-style train option for a family travelling with small children?", "relevant_document_ids": [], "relevant_question_ids": [8112]},
+    {"case_id": "copenhagen-sightseeing-sv", "query": "Vilka sevärdheter och rundturer är bäst i Köpenhamn?", "relevant_document_ids": [], "relevant_question_ids": [144]},
+    {"case_id": "porto-sunset-en", "query": "Where is a good place to watch and photograph the sunset in Porto?", "relevant_document_ids": [], "relevant_question_ids": [52933]},
+    {"case_id": "negative-nairobi-passport", "query": "Jag har tappat mitt pass i Nairobi, hur får jag ett provisoriskt pass?", "relevant_document_ids": []},
+    {"case_id": "negative-cairo-wheelchair", "query": "Which museums in Cairo are fully wheelchair accessible?", "relevant_document_ids": []},
+    {"case_id": "negative-thailand-sleeper-train", "query": "Hur bokar jag nattåget från Bangkok till Chiang Mai?", "relevant_document_ids": []},
+    {"case_id": "negative-swiss-avalanche", "query": "How can a skier check the current avalanche risk in the Swiss Alps?", "relevant_document_ids": []}
+  ]
+}
