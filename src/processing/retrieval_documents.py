@@ -12,11 +12,13 @@ DEFAULT_OUTPUT_DIR = Path("data/processed")
 
 
 def _validate_attribution(item: dict[str, Any], label: str) -> None:
-    """Require the fields needed to attribute licensed source content."""
+    """Validate available license metadata and require author attribution."""
     license_name = item.get("content_license")
     author = item.get("author")
-    if not isinstance(license_name, str) or not license_name.strip():
-        raise ValueError(f"{label} is missing its content license")
+    if license_name is not None and (
+        not isinstance(license_name, str) or not license_name.strip()
+    ):
+        raise ValueError(f"{label} has an invalid content license")
     if not isinstance(author, dict):
         raise ValueError(f"{label} is missing author attribution")
     display_name = author.get("display_name")
@@ -70,6 +72,9 @@ def _metadata(
         "created_at": item.get("created_at"),
         "last_activity_at": item.get("last_activity_at"),
         "collected_at": thread.get("collected_at"),
+        "license_status": (
+            "provided_by_source" if item.get("content_license") else "missing_from_source"
+        ),
     }
 
 
