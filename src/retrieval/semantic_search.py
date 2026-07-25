@@ -130,8 +130,9 @@ def search(
     query: str,
     top_k: int = 5,
     model: EmbeddingModel | None = None,
+    unique_threads: bool = False,
 ) -> list[dict[str, Any]]:
-    """Return the most similar records using cosine similarity."""
+    """Return the most similar records, optionally limited to one per thread."""
     if not isinstance(query, str) or not query.strip():
         raise ValueError("query must not be empty")
     if top_k <= 0:
@@ -145,10 +146,17 @@ def search(
         )
 
     scores = index.embeddings @ query_vector
-    ranked_indices = np.argsort(-scores, kind="stable")[: min(top_k, len(scores))]
+    ranked_indices = np.argsort(-scores, kind="stable")
     results: list[dict[str, Any]] = []
+    seen_question_ids: set[int] = set()
     for position in ranked_indices:
         record = index.records[int(position)]
+        metadata = record.get("metadata")
+        question_id = metadata.get("question_id") if isinstance(metadata, dict) else None
+        if unique_threads and isinstance(question_id, int) and not isinstance(question_id, bool):
+            if question_id in seen_question_ids:
+                continue
+            seen_question_ids.add(question_id)
         results.append(
             {
                 "document_id": record["document_id"],
@@ -159,6 +167,8 @@ def search(
                 "metadata": record.get("metadata"),
             }
         )
+        if len(results) == min(top_k, len(scores)):
+            break
     return results
 
 
@@ -168,6 +178,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--documents-file", type=Path)
     parser.add_argument("--query", required=True)
     parser.add_argument("--top-k", type=int, default=5)
+    parser.add_argument(
+        "--unique-threads",
+        action="store_true",
+        help="Return at most one document per Stack Exchange question thread",
+    )
     return parser.parse_args()
 
 
@@ -175,7 +190,12 @@ def main() -> None:
     args = parse_args()
     try:
         index = load_search_index(args.manifest, args.documents_file)
-        results = search(index, args.query, args.top_k)
+        results = search(
+            index,
+            args.query,
+            args.top_k,
+            unique_threads=args.unique_threads,
+        )
     except (ValueError, RuntimeError, OSError) as error:
         raise SystemExit(f"Semantic search failed: {error}") from error
     print(json.dumps(results, ensure_ascii=False, indent=2))

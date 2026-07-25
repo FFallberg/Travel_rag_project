@@ -78,6 +78,50 @@ def test_tied_scores_keep_artifact_order(tmp_path) -> None:
     assert [result["document_id"] for result in results] == ["doc-water", "doc-train"]
 
 
+def test_unique_threads_keeps_highest_scoring_document_per_question(tmp_path) -> None:
+    manifest_path, documents_path = create_index_files(tmp_path)
+    records = [json.loads(line) for line in documents_path.read_text().splitlines()]
+    records[0]["metadata"]["question_id"] = 10
+    records[1]["metadata"]["question_id"] = 10
+    records.append(
+        {
+            "document_id": "doc-coast",
+            "text": "A different coastal thread",
+            "source_url": "https://example.com/coast",
+            "content_license": "CC BY-SA 4.0",
+            "metadata": {"question_id": 20},
+        }
+    )
+    documents_path.write_text(
+        "".join(json.dumps(record) + "\n" for record in records), encoding="utf-8"
+    )
+    vectors_path = tmp_path / "embeddings.npz"
+    with vectors_path.open("wb") as output:
+        np.savez_compressed(
+            output,
+            document_ids=np.asarray(["doc-water", "doc-train", "doc-coast"]),
+            embeddings=np.asarray(
+                [[1.0, 0.0], [0.9, 0.4358899], [0.8, 0.6]], dtype=np.float32
+            ),
+        )
+    manifest = json.loads(manifest_path.read_text())
+    manifest["document_count"] = 3
+    manifest["source_sha256"] = hashlib.sha256(documents_path.read_bytes()).hexdigest()
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    index = load_search_index(manifest_path)
+
+    results = search(
+        index,
+        "water",
+        top_k=2,
+        model=QueryModel([1.0, 0.0]),
+        unique_threads=True,
+    )
+
+    assert [result["document_id"] for result in results] == ["doc-water", "doc-coast"]
+    assert [result["metadata"]["question_id"] for result in results] == [10, 20]
+
+
 def test_rejects_changed_retrieval_documents(tmp_path) -> None:
     manifest_path, documents_path = create_index_files(tmp_path)
     documents_path.write_text("changed\n", encoding="utf-8")
