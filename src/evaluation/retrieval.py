@@ -81,6 +81,7 @@ def evaluate(
     min_score: float | None = None,
     model: EmbeddingModel | None = None,
     unique_threads: bool = False,
+    tag_boost: float = 0.0,
 ) -> dict[str, Any]:
     """Compute positive retrieval metrics and negative-query rejection at k."""
     if top_k <= 0:
@@ -122,6 +123,7 @@ def evaluate(
             top_k=top_k,
             model=active_model,
             unique_threads=unique_threads,
+            tag_boost=tag_boost,
         )
         passing_results = [
             result
@@ -180,6 +182,8 @@ def evaluate(
                         "rank": rank,
                         "document_id": result["document_id"],
                         "score": result["score"],
+                        "semantic_score": result["semantic_score"],
+                        "tag_matches": result["tag_matches"],
                         "passes_min_score": min_score is None or result["score"] >= min_score,
                         "is_relevant": relevance_target(result) is not None,
                         "source_url": result["source_url"],
@@ -198,6 +202,7 @@ def evaluate(
             "top_k": top_k,
             "min_score": min_score,
             "unique_threads": unique_threads,
+            "tag_boost": tag_boost,
             "hit_rate_at_k": hits / positive_count if positive_count else None,
             "mrr_at_k": reciprocal_rank_sum / positive_count if positive_count else None,
             "mean_recall_at_k": recall_sum / positive_count if positive_count else None,
@@ -221,6 +226,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Evaluate at most one result per Stack Exchange question thread",
     )
+    parser.add_argument(
+        "--tag-boost",
+        type=float,
+        default=0.0,
+        help="Score bonus for each source tag represented in the query",
+    )
     return parser.parse_args()
 
 
@@ -234,6 +245,7 @@ def main() -> None:
             top_k=args.top_k,
             min_score=args.min_score,
             unique_threads=args.unique_threads,
+            tag_boost=args.tag_boost,
         )
     except (ValueError, RuntimeError, OSError) as error:
         raise SystemExit(f"Retrieval evaluation failed: {error}") from error

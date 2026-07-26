@@ -241,7 +241,8 @@ Search the local embedding index with a Swedish or English query:
   --manifest data/processed/stackexchange_embeddings_20260719T110457Z.json \
   --query "sol, bad och närhet till vatten" \
   --top-k 3 \
-  --unique-threads
+  --unique-threads \
+  --tag-boost 0.05
 ```
 
 The search command verifies the retrieval-document checksum and validates the
@@ -250,7 +251,11 @@ the query with the exact model recorded in the manifest, computes cosine
 similarity, and returns ranked JSON containing scores, text, metadata, licenses
 and source links. `--unique-threads` keeps only the best-scoring document from
 each question thread, providing broader context for recommendations. No LLM is
-involved at this stage.
+involved at this stage. `--tag-boost` adds a transparent score bonus for each
+source tag represented in the query; results expose both `semantic_score` and
+`tag_matches` so the ranking remains explainable. Common Swedish and English
+stopwords are ignored. Keep the default `0` unless a non-zero value has been
+validated against the active corpus.
 
 Retrieval evaluation
 
@@ -300,7 +305,8 @@ activities, transport and budget:
   --cases evaluation/stackexchange_recommendation_queries.json \
   --top-k 3 \
   --min-score 0.6 \
-  --unique-threads
+  --unique-threads \
+  --tag-boost 0.05
 ```
 
 Both files include unrelated negative queries. Treat thresholds and metrics as
@@ -312,4 +318,7 @@ car-free beach query. Results also show that several documents from one thread
 can occupy the result list, reducing the breadth of destinations retrieved.
 Running with `--unique-threads` removes those repeated threads and broadens the
 context, while leaving these aggregate metrics unchanged. The remaining miss
-is therefore a ranking problem rather than a duplicate-result problem.
+is therefore a ranking problem rather than a duplicate-result problem. Adding
+the evaluated `--tag-boost 0.05` raises Hit Rate@3 to `1.0` and mean Recall@3
+to `0.833`, while all four negative cases remain rejected. MRR stays at `0.875`
+because some relevant threads move to rank 2.

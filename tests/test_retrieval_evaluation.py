@@ -79,6 +79,7 @@ def test_evaluate_computes_hit_mrr_and_recall() -> None:
     assert report["summary"]["negative_query_count"] == 0
     assert report["summary"]["top_k"] == 2
     assert report["summary"]["unique_threads"] is False
+    assert report["summary"]["tag_boost"] == 0.0
     assert report["summary"]["hit_rate_at_k"] == 1.0
     assert report["summary"]["mrr_at_k"] == 1.0
     assert report["summary"]["mean_recall_at_k"] == 0.75
