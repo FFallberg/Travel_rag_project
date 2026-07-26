@@ -4,7 +4,7 @@ import json
 import numpy as np
 import pytest
 
-from src.retrieval.semantic_search import load_search_index, search
+from src.retrieval.semantic_search import _token_variants, load_search_index, search
 
 
 class QueryModel:
@@ -65,6 +65,8 @@ def test_loads_index_and_ranks_cosine_similarity(tmp_path) -> None:
 
     assert [result["document_id"] for result in results] == ["doc-water", "doc-train"]
     assert results[0]["score"] == pytest.approx(0.8)
+    assert results[0]["semantic_score"] == pytest.approx(0.8)
+    assert results[0]["tag_matches"] == []
     assert results[0]["source_url"] == "https://example.com/water"
     assert results[0]["metadata"] == {"tags": ["beaches"]}
 
@@ -120,6 +122,42 @@ def test_unique_threads_keeps_highest_scoring_document_per_question(tmp_path) ->
 
     assert [result["document_id"] for result in results] == ["doc-water", "doc-coast"]
     assert [result["metadata"]["question_id"] for result in results] == [10, 20]
+
+
+def test_tag_boost_is_transparent_and_can_change_ranking(tmp_path) -> None:
+    manifest_path, _ = create_index_files(tmp_path)
+    index = load_search_index(manifest_path)
+
+    results = search(
+        index,
+        "beach swimming",
+        top_k=2,
+        model=QueryModel([0.6, 0.8]),
+        tag_boost=0.25,
+    )
+
+    assert [result["document_id"] for result in results] == ["doc-water", "doc-train"]
+    assert results[0]["semantic_score"] == pytest.approx(0.6)
+    assert results[0]["score"] == pytest.approx(0.85)
+    assert results[0]["tag_matches"] == ["beaches"]
+    assert results[1]["tag_matches"] == []
+
+
+def test_tag_tokens_ignore_common_swedish_and_english_stopwords() -> None:
+    assert _token_variants("nature-and-wildlife och bad") == {
+        "nature",
+        "wildlife",
+        "bad",
+    }
+
+
+@pytest.mark.parametrize("tag_boost", [-0.1, float("inf"), True])
+def test_rejects_invalid_tag_boost(tmp_path, tag_boost) -> None:
+    manifest_path, _ = create_index_files(tmp_path)
+    index = load_search_index(manifest_path)
+
+    with pytest.raises(ValueError, match="tag_boost"):
+        search(index, "query", model=QueryModel([1.0, 0.0]), tag_boost=tag_boost)
 
 
 def test_rejects_changed_retrieval_documents(tmp_path) -> None:

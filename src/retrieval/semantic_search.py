@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,38 @@ from typing import Any
 import numpy as np
 
 from src.embeddings.local import EmbeddingModel, create_local_model, encode_texts
+
+TAG_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "at",
+    "av",
+    "en",
+    "eller",
+    "ett",
+    "for",
+    "from",
+    "från",
+    "för",
+    "i",
+    "in",
+    "is",
+    "med",
+    "och",
+    "of",
+    "on",
+    "or",
+    "på",
+    "the",
+    "till",
+    "to",
+    "utan",
+    "with",
+    "without",
+    "är",
+}
 
 
 @dataclass(frozen=True)
@@ -125,18 +158,52 @@ def load_search_index(
     return SearchIndex(model_name, document_ids, embeddings, ordered_records)
 
 
+def _token_variants(value: str) -> set[str]:
+    """Return lowercase tokens plus lightweight English singular variants."""
+    variants: set[str] = set()
+    for token in re.findall(r"\w+", value.lower()):
+        if token in TAG_STOPWORDS:
+            continue
+        variants.add(token)
+        if len(token) > 4 and token.endswith("ies"):
+            variants.add(f"{token[:-3]}y")
+        elif len(token) > 4 and token.endswith("es"):
+            variants.add(token[:-2])
+        elif len(token) > 3 and token.endswith("s") and not token.endswith("ss"):
+            variants.add(token[:-1])
+    return variants
+
+
+def _matching_tags(query_tokens: set[str], record: dict[str, Any]) -> list[str]:
+    """Return source tags with at least one token represented in the query."""
+    metadata = record.get("metadata")
+    tags = metadata.get("tags") if isinstance(metadata, dict) else None
+    if not isinstance(tags, list):
+        return []
+    return [
+        tag
+        for tag in tags
+        if isinstance(tag, str) and query_tokens.intersection(_token_variants(tag))
+    ]
+
+
 def search(
     index: SearchIndex,
     query: str,
     top_k: int = 5,
     model: EmbeddingModel | None = None,
     unique_threads: bool = False,
+    tag_boost: float = 0.0,
 ) -> list[dict[str, Any]]:
     """Return the most similar records, optionally limited to one per thread."""
     if not isinstance(query, str) or not query.strip():
         raise ValueError("query must not be empty")
     if top_k <= 0:
         raise ValueError("top_k must be positive")
+    if not isinstance(tag_boost, (int, float)) or isinstance(tag_boost, bool):
+        raise ValueError("tag_boost must be a non-negative finite number")
+    if not np.isfinite(tag_boost) or tag_boost < 0:
+        raise ValueError("tag_boost must be a non-negative finite number")
     active_model = model or create_local_model(index.model_name)
     query_vector = encode_texts(active_model, [query.strip()], batch_size=1)[0]
     if query_vector.shape[0] != index.embeddings.shape[1]:
@@ -145,8 +212,13 @@ def search(
             f"index expects {index.embeddings.shape[1]}"
         )
 
-    scores = index.embeddings @ query_vector
-    ranked_indices = np.argsort(-scores, kind="stable")
+    semantic_scores = index.embeddings @ query_vector
+    query_tokens = _token_variants(query)
+    matched_tags = [_matching_tags(query_tokens, record) for record in index.records]
+    ranking_scores = semantic_scores + np.asarray(
+        [len(matches) * tag_boost for matches in matched_tags], dtype=np.float32
+    )
+    ranked_indices = np.argsort(-ranking_scores, kind="stable")
     results: list[dict[str, Any]] = []
     seen_question_ids: set[int] = set()
     for position in ranked_indices:
@@ -160,14 +232,16 @@ def search(
         results.append(
             {
                 "document_id": record["document_id"],
-                "score": float(scores[position]),
+                "score": float(ranking_scores[position]),
+                "semantic_score": float(semantic_scores[position]),
+                "tag_matches": matched_tags[int(position)],
                 "text": record.get("text"),
                 "source_url": record.get("source_url"),
                 "content_license": record.get("content_license"),
                 "metadata": record.get("metadata"),
             }
         )
-        if len(results) == min(top_k, len(scores)):
+        if len(results) == min(top_k, len(ranking_scores)):
             break
     return results
 
@@ -183,6 +257,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Return at most one document per Stack Exchange question thread",
     )
+    parser.add_argument(
+        "--tag-boost",
+        type=float,
+        default=0.0,
+        help="Score bonus for each source tag represented in the query",
+    )
     return parser.parse_args()
 
 
@@ -195,6 +275,7 @@ def main() -> None:
             args.query,
             args.top_k,
             unique_threads=args.unique_threads,
+            tag_boost=args.tag_boost,
         )
     except (ValueError, RuntimeError, OSError) as error:
         raise SystemExit(f"Semantic search failed: {error}") from error
