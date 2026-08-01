@@ -143,6 +143,29 @@ def test_tag_boost_is_transparent_and_can_change_ranking(tmp_path) -> None:
     assert results[1]["tag_matches"] == []
 
 
+def test_answers_only_skips_questions_before_selecting_top_k(tmp_path) -> None:
+    manifest_path, documents_path = create_index_files(tmp_path)
+    records = [json.loads(line) for line in documents_path.read_text().splitlines()]
+    records[0]["metadata"]["content_type"] = "question"
+    records[1]["metadata"]["content_type"] = "answer"
+    documents_path.write_text(
+        "".join(json.dumps(record) + "\n" for record in records), encoding="utf-8"
+    )
+    manifest = json.loads(manifest_path.read_text())
+    manifest["source_sha256"] = hashlib.sha256(documents_path.read_bytes()).hexdigest()
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    results = search(
+        load_search_index(manifest_path),
+        "water",
+        top_k=2,
+        model=QueryModel([1.0, 0.0]),
+        answers_only=True,
+    )
+
+    assert [result["document_id"] for result in results] == ["doc-train"]
+
+
 def test_tag_tokens_ignore_common_swedish_and_english_stopwords() -> None:
     assert _token_variants("nature-and-wildlife och bad") == {
         "nature",

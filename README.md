@@ -322,3 +322,38 @@ is therefore a ranking problem rather than a duplicate-result problem. Adding
 the evaluated `--tag-boost 0.05` raises Hit Rate@3 to `1.0` and mean Recall@3
 to `0.833`, while all four negative cases remain rejected. MRR stays at `0.875`
 because some relevant threads move to rank 2.
+
+Source-grounded recommendations
+
+After retrieval has been evaluated, generate a recommendation with a local
+model served by Ollama. Install the default multilingual model once:
+
+```bash
+ollama pull qwen3:4b
+```
+
+Then run:
+
+```bash
+.venv/bin/python -m src.generation.recommendation \
+  --manifest data/processed/stackexchange_embeddings_20260725T133119Z.json \
+  --query "Jag vill ha sol, bad och en avslappnad stad som påminner om Porto"
+```
+
+The command retrieves context before generation, defaults to one result per
+thread, uses only answer documents as recommendation evidence, applies the
+evaluated `0.05` tag boost, and excludes evidence below the preliminary `0.6`
+score threshold. Thus `top-k 3` means up to three answers from three different
+threads, not one thread. If no answer passes, it abstains without calling the
+LLM. Use `--include-questions` only for experiments where source questions are
+acceptable evidence. The JSON response contains the answer plus a
+machine-readable source list with URLs, authors, document IDs, scores and
+content licenses.
+
+The default generation model is `qwen3:4b`; override it with `--model` to use
+another model already installed in Ollama. `OLLAMA_BASE_URL` can point to a
+non-default Ollama server. No external LLM API or API key is required.
+Generated claims are instructed to cite the numbered retrieved sources. Answers
+without citations, or with references to sources that were not retrieved, are
+rejected. Claim-level citation correctness still needs a dedicated generation
+evaluation before production use.

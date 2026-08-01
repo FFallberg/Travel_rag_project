@@ -194,8 +194,9 @@ def search(
     model: EmbeddingModel | None = None,
     unique_threads: bool = False,
     tag_boost: float = 0.0,
+    answers_only: bool = False,
 ) -> list[dict[str, Any]]:
-    """Return the most similar records, optionally limited to one per thread."""
+    """Return similar records, optionally restricted to answers and unique threads."""
     if not isinstance(query, str) or not query.strip():
         raise ValueError("query must not be empty")
     if top_k <= 0:
@@ -224,6 +225,9 @@ def search(
     for position in ranked_indices:
         record = index.records[int(position)]
         metadata = record.get("metadata")
+        content_type = metadata.get("content_type") if isinstance(metadata, dict) else None
+        if answers_only and content_type != "answer":
+            continue
         question_id = metadata.get("question_id") if isinstance(metadata, dict) else None
         if unique_threads and isinstance(question_id, int) and not isinstance(question_id, bool):
             if question_id in seen_question_ids:
@@ -241,7 +245,7 @@ def search(
                 "metadata": record.get("metadata"),
             }
         )
-        if len(results) == min(top_k, len(ranking_scores)):
+        if len(results) == top_k:
             break
     return results
 
@@ -263,6 +267,11 @@ def parse_args() -> argparse.Namespace:
         default=0.0,
         help="Score bonus for each source tag represented in the query",
     )
+    parser.add_argument(
+        "--answers-only",
+        action="store_true",
+        help="Return only answer documents, excluding source questions",
+    )
     return parser.parse_args()
 
 
@@ -276,6 +285,7 @@ def main() -> None:
             args.top_k,
             unique_threads=args.unique_threads,
             tag_boost=args.tag_boost,
+            answers_only=args.answers_only,
         )
     except (ValueError, RuntimeError, OSError) as error:
         raise SystemExit(f"Semantic search failed: {error}") from error
